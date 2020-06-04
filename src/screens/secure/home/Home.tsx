@@ -11,8 +11,23 @@ import {
   Left,
   Right,
 } from 'native-base';
+import {map} from 'lodash';
 
 const HomeScreen: React.FC = (props: any) => {
+  const sampleList: any = [
+    {
+      mobileNo: '9043487398',
+      code: 56787,
+    },
+    {
+      mobileNo: '9500103007',
+      code: 7888,
+    },
+    {
+      mobileNo: '8608660324',
+      code: 9963,
+    },
+  ];
   return (
     <Container>
       <Header transparent={true}>
@@ -27,15 +42,18 @@ const HomeScreen: React.FC = (props: any) => {
       </Header>
       <Content>
         <List>
-          <ListItem onPress={() => props.navigation.navigate('ChatScreen')}>
-            <Text>9043487398</Text>
-          </ListItem>
-          <ListItem>
-            <Text>9500103007</Text>
-          </ListItem>
-          <ListItem>
-            <Text>8608660234</Text>
-          </ListItem>
+          {map(sampleList, (list: any, index: any) => {
+            return (
+              <ListItem
+                key={index}
+                onPress={() => props.navigation.navigate('ChatScreen')}>
+                <Body>
+                  <Text>{list.mobileNo}</Text>
+                  <Text>{list.code}</Text>
+                </Body>
+              </ListItem>
+            );
+          })}
         </List>
       </Content>
     </Container>
