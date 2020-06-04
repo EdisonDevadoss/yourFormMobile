@@ -1,14 +1,55 @@
+/* eslint-disable no-bitwise */
 /* eslint-disable react-native/no-inline-styles */
 import React, {useState, useEffect} from 'react';
 import {Container, Header, Body, Title, Left, Right} from 'native-base';
 import {GiftedChat} from 'react-native-gifted-chat';
 import RenderBubble from '../../../components/chat/RenderBubble';
 import RenderMicroPhone from '../.././../components/chat/RenderMicroPhone';
+import {KeyboardAvoidingView, Platform, PermissionsAndroid} from 'react-native';
+import {AudioRecorder, AudioUtils} from 'react-native-audio';
 
 const ChatScreen: React.FC = () => {
+  const messageIdGenerator = () => {
+    // generates uuid.
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      // eslint-disable-next-line no-bitwise
+      let r = (Math.random() * 16) | 0,
+        v = c == 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  };
+
   const [messages, setMessages] = useState([]);
+  const [startAudio, setStartAudio] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [audioPath, setAudioPath] = useState(
+    `${AudioUtils.DocumentDirectoryPath}/${messageIdGenerator()}test.aac`,
+  );
+  const [playAudio, setPlayAudio] = useState(false);
+  const [audioSettings, setAudioSettings] = useState({
+    SampleRate: 22050,
+    Channels: 1,
+    AudioQuality: 'Low',
+    AudioEncoding: 'aac',
+    MeteringEnabled: true,
+    IncludeBase64: true,
+    AudioEncodingBitRate: 32000,
+  });
 
   useEffect(() => {
+    checkPermission().then(async isPermission => {
+      setHasPermission(isPermission);
+      if (!isPermission) {
+        return;
+      }
+      await AudioRecorder.prepareRecordingAtPath(audioPath, audioSettings);
+      AudioRecorder.onProgress = data => {
+        console.log(data, 'onProgress data');
+      };
+      AudioRecorder.onFinished = data => {
+        console.log(data, 'on finish');
+      };
+    });
     const message: any = {
       _id: 1,
       text: 'Hello developer',
@@ -20,19 +61,51 @@ const ChatScreen: React.FC = () => {
       },
     };
     setMessages([message]);
-  }, []);
+  }, [audioPath, audioSettings]);
+
+  const checkPermission = () => {
+    if (Platform.OS !== 'android') {
+      return Promise.resolve(true);
+    }
+    const rationale = {
+      title: 'Microphone Permission',
+      message:
+        'AudioExample needs access to your microphone so you can record audio.',
+    };
+    return PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+      rationale,
+    ).then(result => {
+      console.log('Permission result:', result);
+      return result === true || result === PermissionsAndroid.RESULTS.GRANTED;
+    });
+  };
 
   const onSend = (message: any) => {
     const updateMessge = GiftedChat.append(messages, message);
     setMessages(updateMessge);
   };
 
-  const onAudioPress = () => {
+  const handleAudioPress = async () => {
+    if (!startAudio) {
+      setStartAudio(true);
+      await AudioRecorder.startRecording();
+    } else {
+      setStartAudio(false);
+      await AudioRecorder.stopRecording();
+      const fileName = `${messageIdGenerator()}.aac`;
+      const file = {
+        uri: Platform.OS === 'ios' ? audioPath : `file://${audioPath}`,
+        name: fileName,
+        type: 'audio/aac',
+      };
+      console.log('file is', file);
+    }
     console.log('onAudioPress is called');
   };
 
   const renderBubble = (props: any) => {
-    return <RenderBubble {...props} onAudioPress={onAudioPress} />;
+    return <RenderBubble {...props} />;
   };
 
   return (
@@ -47,7 +120,10 @@ const ChatScreen: React.FC = () => {
         </Body>
         <Right />
       </Header>
-      <RenderMicroPhone />
+      <RenderMicroPhone
+        handleAudio={handleAudioPress}
+        startAudio={startAudio}
+      />
       <GiftedChat
         messages={messages}
         onSend={messages => onSend(messages)}
@@ -56,6 +132,7 @@ const ChatScreen: React.FC = () => {
           _id: 1,
         }}
       />
+      <KeyboardAvoidingView />
     </Container>
   );
 };
