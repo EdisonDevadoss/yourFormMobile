@@ -7,6 +7,8 @@ import RenderBubble from '../../../components/chat/RenderBubble';
 import RenderMicroPhone from '../.././../components/chat/RenderMicroPhone';
 import {KeyboardAvoidingView, Platform, PermissionsAndroid} from 'react-native';
 import {AudioRecorder, AudioUtils} from 'react-native-audio';
+import {docStorage} from './Chat.action';
+import {uuid} from 'uuidv4';
 
 const ChatScreen: React.FC = () => {
   const messageIdGenerator = () => {
@@ -43,10 +45,10 @@ const ChatScreen: React.FC = () => {
         return;
       }
       await AudioRecorder.prepareRecordingAtPath(audioPath, audioSettings);
-      AudioRecorder.onProgress = data => {
+      AudioRecorder.onProgress = (data: any) => {
         console.log(data, 'onProgress data');
       };
-      AudioRecorder.onFinished = data => {
+      AudioRecorder.onFinished = (data: any) => {
         console.log(data, 'on finish');
       };
     });
@@ -67,7 +69,7 @@ const ChatScreen: React.FC = () => {
     if (Platform.OS !== 'android') {
       return Promise.resolve(true);
     }
-    const rationale = {
+    const rationale: any = {
       title: 'Microphone Permission',
       message:
         'AudioExample needs access to your microphone so you can record audio.',
@@ -75,7 +77,7 @@ const ChatScreen: React.FC = () => {
     return PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
       rationale,
-    ).then(result => {
+    ).then((result: any) => {
       console.log('Permission result:', result);
       return result === true || result === PermissionsAndroid.RESULTS.GRANTED;
     });
@@ -99,9 +101,26 @@ const ChatScreen: React.FC = () => {
         name: fileName,
         type: 'audio/aac',
       };
-      console.log('file is', file);
+      docStorage(file.uri).then(url => {
+        const msg = getMessageObject('audio', url, fileName);
+        onSend(msg);
+      });
     }
-    console.log('onAudioPress is called');
+  };
+
+  const getMessageObject = (content: string, uri: any, fileName: any) => {
+    const msg = {
+      _id: uuid(),
+      createdAt: new Date(),
+      user: {
+        _id: 2,
+      },
+      [content]: uri,
+    };
+    if (content === 'doc') {
+      msg.fileName = fileName;
+    }
+    return [msg];
   };
 
   const renderBubble = (props: any) => {
