@@ -3,10 +3,16 @@
 import React, {useState, useEffect} from 'react';
 import {Container, Header, Body, Title, Left, Right} from 'native-base';
 import {GiftedChat} from 'react-native-gifted-chat';
-import RenderBubble from '../../../components/chat/RenderBubble';
+import {renderBubble, RenderAudio} from '../../../components/chat/RenderBubble';
 import RenderMicroPhone from '../.././../components/chat/RenderMicroPhone';
-import {KeyboardAvoidingView, Platform, PermissionsAndroid} from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  PermissionsAndroid,
+  Alert,
+} from 'react-native';
 import {AudioRecorder, AudioUtils} from 'react-native-audio';
+import Sound from 'react-native-sound';
 import {docStorage} from './Chat.action';
 import {uuid} from 'uuidv4';
 
@@ -44,7 +50,7 @@ const ChatScreen: React.FC = () => {
       if (!isPermission) {
         return;
       }
-      await AudioRecorder.prepareRecordingAtPath(audioPath, audioSettings);
+      await prepareRecordingPath(audioPath);
       AudioRecorder.onProgress = (data: any) => {
         console.log(data, 'onProgress data');
       };
@@ -54,7 +60,7 @@ const ChatScreen: React.FC = () => {
     });
     const message: any = {
       _id: 1,
-      text: 'Hello developer',
+      text: 'I am a React developer',
       createdAt: new Date(),
       user: {
         _id: 2,
@@ -64,6 +70,16 @@ const ChatScreen: React.FC = () => {
     };
     setMessages([message]);
   }, [audioPath, audioSettings]);
+
+  const prepareRecordingPath = audioPath => {
+    AudioRecorder.prepareRecordingAtPath(audioPath, {
+      SampleRate: 22050,
+      Channels: 1,
+      AudioQuality: 'Low',
+      AudioEncoding: 'aac',
+      AudioEncodingBitRate: 32000,
+    });
+  };
 
   const checkPermission = () => {
     if (Platform.OS !== 'android') {
@@ -91,6 +107,7 @@ const ChatScreen: React.FC = () => {
   const handleAudioPress = async () => {
     if (!startAudio) {
       setStartAudio(true);
+      await prepareRecordingPath(audioPath);
       await AudioRecorder.startRecording();
     } else {
       setStartAudio(false);
@@ -113,7 +130,7 @@ const ChatScreen: React.FC = () => {
       _id: uuid(),
       createdAt: new Date(),
       user: {
-        _id: 2,
+        _id: 1,
       },
       [content]: uri,
     };
@@ -123,8 +140,35 @@ const ChatScreen: React.FC = () => {
     return [msg];
   };
 
-  const renderBubble = (props: any) => {
-    return <RenderBubble {...props} />;
+  const onAudioPress = (audio: any) => {
+    console.log('audio is', audio);
+    setPlayAudio(true);
+    const sound = new Sound(audio, Sound.MAIN_BUNDLE, (error: any) => {
+      if (error) {
+        console.log('failed to load the sound', error);
+      }
+      setPlayAudio(false);
+      sound.play(success => {
+        console.log(success, 'success play');
+        sound.stop();
+        if (!success) {
+          Alert.alert('There was an error playing this audio');
+        }
+      });
+    });
+    sound.play(() => {
+      sound.stop();
+    });
+  };
+
+  const renderAudio = (props: any) => {
+    return (
+      <RenderAudio
+        {...props}
+        onAudioPress={onAudioPress}
+        playAudio={playAudio}
+      />
+    );
   };
 
   return (
@@ -146,7 +190,8 @@ const ChatScreen: React.FC = () => {
       <GiftedChat
         messages={messages}
         onSend={messages => onSend(messages)}
-        renderBubble={renderBubble}
+        //renderBubble={renderBubble}
+        renderMessageAudio={renderAudio}
         user={{
           _id: 1,
         }}
