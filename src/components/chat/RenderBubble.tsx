@@ -14,7 +14,8 @@ const RenderAudio = (props: any) => {
         style={{
           marginLeft: 10,
           fontSize: 25,
-          color: props.playAudio ? 'red' : 'blue',
+          // color: props.playAudio ? 'red' : 'black',
+          color: 'black'
         }}
       />
     </TouchableOpacity>

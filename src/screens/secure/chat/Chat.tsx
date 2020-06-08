@@ -15,6 +15,8 @@ import {AudioRecorder, AudioUtils} from 'react-native-audio';
 import Sound from 'react-native-sound';
 import {docStorage} from './Chat.action';
 import {uuid} from 'uuidv4';
+import RenderVideo from '../../../components/chat/RenderVideo'
+
 
 const ChatScreen: React.FC = () => {
   const messageIdGenerator = () => {
@@ -60,7 +62,8 @@ const ChatScreen: React.FC = () => {
     });
     const message: any = {
       _id: 1,
-      text: 'I am a React developer',
+      // text: 'I am a React developer',
+      video: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
       createdAt: new Date(),
       user: {
         _id: 2,
@@ -141,7 +144,6 @@ const ChatScreen: React.FC = () => {
   };
 
   const onAudioPress = (audio: any) => {
-    console.log('audio is', audio);
     setPlayAudio(true);
     const sound = new Sound(audio, Sound.MAIN_BUNDLE, (error: any) => {
       if (error) {
@@ -150,15 +152,13 @@ const ChatScreen: React.FC = () => {
       setPlayAudio(false);
       sound.play(success => {
         console.log(success, 'success play');
-        sound.stop();
+        sound.release();
         if (!success) {
           Alert.alert('There was an error playing this audio');
         }
       });
     });
-    sound.play(() => {
-      sound.stop();
-    });
+    sound.release();
   };
 
   const renderAudio = (props: any) => {
@@ -166,7 +166,7 @@ const ChatScreen: React.FC = () => {
       <RenderAudio
         {...props}
         onAudioPress={onAudioPress}
-        playAudio={playAudio}
+        // playAudio={playAudio}
       />
     );
   };
@@ -192,6 +192,7 @@ const ChatScreen: React.FC = () => {
         onSend={messages => onSend(messages)}
         //renderBubble={renderBubble}
         renderMessageAudio={renderAudio}
+        renderMessageVideo={RenderVideo}
         user={{
           _id: 1,
         }}
