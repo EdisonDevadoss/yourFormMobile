@@ -1,8 +1,18 @@
 /* eslint-disable no-bitwise */
 /* eslint-disable react-native/no-inline-styles */
 import React, {useState, useEffect} from 'react';
-import {Container, Header, Body, Title, Left, Right} from 'native-base';
-import {GiftedChat} from 'react-native-gifted-chat';
+import {
+  Container,
+  Header,
+  Body,
+  Title,
+  Left,
+  Right,
+  View,
+  Text,
+  Icon,
+} from 'native-base';
+import {GiftedChat, Actions, Send} from 'react-native-gifted-chat';
 import {renderBubble, RenderAudio} from '../../../components/chat/RenderBubble';
 import RenderMicroPhone from '../.././../components/chat/RenderMicroPhone';
 import {
@@ -15,8 +25,8 @@ import {AudioRecorder, AudioUtils} from 'react-native-audio';
 import Sound from 'react-native-sound';
 import {docStorage} from './Chat.action';
 import {uuid} from 'uuidv4';
-import RenderVideo from '../../../components/chat/RenderVideo'
-
+import RenderVideo from '../../../components/chat/RenderVideo';
+import ImagePicker from 'react-native-image-crop-picker';
 
 const ChatScreen: React.FC = () => {
   const messageIdGenerator = () => {
@@ -33,9 +43,13 @@ const ChatScreen: React.FC = () => {
   const [startAudio, setStartAudio] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [audioPath, setAudioPath] = useState(
-    `${AudioUtils.DocumentDirectoryPath}/${messageIdGenerator()}test.aac`,
+    `${AudioUtils.DocumentDirectoryPath}/${new Date().getTime()}.aac`,
   );
   const [playAudio, setPlayAudio] = useState(false);
+
+  const [isMediaLoading, setIsMediaLoading] = useState(false);
+  const [canEditText, setEditText] = useState(true);
+
   const [audioSettings, setAudioSettings] = useState({
     SampleRate: 22050,
     Channels: 1,
@@ -60,22 +74,23 @@ const ChatScreen: React.FC = () => {
         console.log(data, 'on finish');
       };
     });
-    const message: any = {
-      _id: 1,
-      // text: 'I am a React developer',
-      video: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-      createdAt: new Date(),
-      user: {
-        _id: 2,
-        name: 'React Native',
-        avatar: 'https://placeimg.com/140/140/any',
+    const message: any = [
+      {
+        _id: 1,
+        text: 'I am a React developer',
+        createdAt: new Date(),
+        user: {
+          _id: 2,
+          name: 'React Native',
+          avatar: 'https://placeimg.com/140/140/any',
+        },
       },
-    };
-    setMessages([message]);
-  }, [audioPath, audioSettings]);
+    ];
+    setMessages(message);
+  }, []);
 
-  const prepareRecordingPath = audioPath => {
-    AudioRecorder.prepareRecordingAtPath(audioPath, {
+  const prepareRecordingPath = (path: any) => {
+    AudioRecorder.prepareRecordingAtPath(path, {
       SampleRate: 22050,
       Channels: 1,
       AudioQuality: 'Low',
@@ -105,6 +120,8 @@ const ChatScreen: React.FC = () => {
   const onSend = (message: any) => {
     const updateMessge = GiftedChat.append(messages, message);
     setMessages(updateMessge);
+    setIsMediaLoading(false);
+    setEditText(true);
   };
 
   const handleAudioPress = async () => {
@@ -115,12 +132,15 @@ const ChatScreen: React.FC = () => {
     } else {
       setStartAudio(false);
       await AudioRecorder.stopRecording();
-      const fileName = `${messageIdGenerator()}.aac`;
+      const fileName = `${new Date().getTime()}.aac`;
       const file = {
         uri: Platform.OS === 'ios' ? audioPath : `file://${audioPath}`,
         name: fileName,
         type: 'audio/aac',
       };
+      console.log('file is', file);
+      // const msg = getMessageObject('audio', file.uri, fileName);
+      // onSend(msg);
       docStorage(file.uri).then(url => {
         const msg = getMessageObject('audio', url, fileName);
         onSend(msg);
@@ -144,6 +164,7 @@ const ChatScreen: React.FC = () => {
   };
 
   const onAudioPress = (audio: any) => {
+    console.log('audio is', audio);
     setPlayAudio(true);
     const sound = new Sound(audio, Sound.MAIN_BUNDLE, (error: any) => {
       if (error) {
@@ -166,9 +187,55 @@ const ChatScreen: React.FC = () => {
       <RenderAudio
         {...props}
         onAudioPress={onAudioPress}
-        // playAudio={playAudio}
+        playAudio={playAudio}
       />
     );
+  };
+
+  const renderSend = (props: any) => {
+    if (!props.text.trim()) {
+      return (
+        <RenderMicroPhone
+          handleAudio={handleAudioPress}
+          startAudio={startAudio}
+        />
+      );
+    }
+    return <Send {...props} />;
+  };
+
+  const imageOrVideoPicker = () => {
+    ImagePicker.openPicker({})
+      .then((result: any) => {
+        console.log('result is', result);
+        setIsMediaLoading(true);
+        setEditText(false);
+        docStorage(result.path)
+          .then((uri: any) => {
+            console.log('uri is', uri);
+            const isVideo = result.mime.startsWith('video');
+            const content = isVideo ? 'video' : 'image';
+            const msg = getMessageObject(content, uri, null);
+            onSend(msg);
+          })
+          .catch(() => {
+            setIsMediaLoading(false);
+            setEditText(true);
+          });
+      })
+      .catch(() => {
+        return null;
+      });
+  };
+
+  const renderActions = (params: any) => {
+    const options = {
+      'Choose image/video': () => {
+        imageOrVideoPicker();
+      },
+      Cancel: () => {}, // tslint:disable-line
+    };
+    return <Actions {...params} options={options} />;
   };
 
   return (
@@ -183,18 +250,23 @@ const ChatScreen: React.FC = () => {
         </Body>
         <Right />
       </Header>
-      <RenderMicroPhone
-        handleAudio={handleAudioPress}
-        startAudio={startAudio}
-      />
       <GiftedChat
         messages={messages}
-        onSend={messages => onSend(messages)}
+        onSend={sms => onSend(sms)}
         //renderBubble={renderBubble}
         renderMessageAudio={renderAudio}
         renderMessageVideo={RenderVideo}
+        renderSend={renderSend}
+        renderActions={renderActions}
         user={{
           _id: 1,
+        }}
+        textInputProps={{
+          editable: canEditText,
+          placeholder: canEditText
+            ? 'Type a message...'
+            : isMediaLoading && 'Uploading media ...',
+          selectTextOnFocus: canEditText,
         }}
       />
       <KeyboardAvoidingView />

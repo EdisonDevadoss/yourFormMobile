@@ -7,15 +7,14 @@ import {StyleSheet, TouchableOpacity} from 'react-native';
 const RenderAudio = (props: any) => {
   return (
     <TouchableOpacity
-      style={styles.imageStyle}
+      style={styles.audioStyle}
       onPress={() => props.onAudioPress(props.currentMessage.audio)}>
       <Icon
-        name={'play'}
+        name={props.playAudio ? 'pause' : 'play'}
         style={{
           marginLeft: 10,
           fontSize: 25,
-          // color: props.playAudio ? 'red' : 'black',
-          color: 'black'
+          color: props.playAudio ? 'red' : 'black',
         }}
       />
     </TouchableOpacity>
@@ -23,7 +22,7 @@ const RenderAudio = (props: any) => {
 };
 
 const styles = StyleSheet.create({
-  imageStyle: {
+  audioStyle: {
     borderRadius: 13,
     height: 30,
     //margin: 3,
