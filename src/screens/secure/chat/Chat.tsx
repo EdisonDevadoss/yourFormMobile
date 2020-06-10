@@ -27,18 +27,10 @@ import {docStorage} from './Chat.action';
 import {uuid} from 'uuidv4';
 import RenderVideo from '../../../components/chat/RenderVideo';
 import ImagePicker from 'react-native-image-crop-picker';
+import {documentUpload, getDocument} from '../../../lib/docUpload';
+import renderCustomView from '../../../components/chat/RenderCustomView';
 
 const ChatScreen: React.FC = () => {
-  const messageIdGenerator = () => {
-    // generates uuid.
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      // eslint-disable-next-line no-bitwise
-      let r = (Math.random() * 16) | 0,
-        v = c == 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  };
-
   const [messages, setMessages] = useState([]);
   const [startAudio, setStartAudio] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
@@ -48,17 +40,6 @@ const ChatScreen: React.FC = () => {
   const [playAudio, setPlayAudio] = useState(false);
 
   const [isMediaLoading, setIsMediaLoading] = useState(false);
-  const [canEditText, setEditText] = useState(true);
-
-  const [audioSettings, setAudioSettings] = useState({
-    SampleRate: 22050,
-    Channels: 1,
-    AudioQuality: 'Low',
-    AudioEncoding: 'aac',
-    MeteringEnabled: true,
-    IncludeBase64: true,
-    AudioEncodingBitRate: 32000,
-  });
 
   useEffect(() => {
     checkPermission().then(async isPermission => {
@@ -78,7 +59,7 @@ const ChatScreen: React.FC = () => {
       {
         _id: 1,
         text: 'I am a React developer',
-        createdAt: new Date(),
+        createdAt: '2020-06-10T06:13:25.704Z',
         user: {
           _id: 2,
           name: 'React Native',
@@ -121,7 +102,6 @@ const ChatScreen: React.FC = () => {
     const updateMessge = GiftedChat.append(messages, message);
     setMessages(updateMessge);
     setIsMediaLoading(false);
-    setEditText(true);
   };
 
   const handleAudioPress = async () => {
@@ -138,9 +118,6 @@ const ChatScreen: React.FC = () => {
         name: fileName,
         type: 'audio/aac',
       };
-      console.log('file is', file);
-      // const msg = getMessageObject('audio', file.uri, fileName);
-      // onSend(msg);
       docStorage(file.uri).then(url => {
         const msg = getMessageObject('audio', url, fileName);
         onSend(msg);
@@ -164,7 +141,6 @@ const ChatScreen: React.FC = () => {
   };
 
   const onAudioPress = (audio: any) => {
-    console.log('audio is', audio);
     setPlayAudio(true);
     const sound = new Sound(audio, Sound.MAIN_BUNDLE, (error: any) => {
       if (error) {
@@ -209,7 +185,6 @@ const ChatScreen: React.FC = () => {
       .then((result: any) => {
         console.log('result is', result);
         setIsMediaLoading(true);
-        setEditText(false);
         docStorage(result.path)
           .then((uri: any) => {
             console.log('uri is', uri);
@@ -220,7 +195,6 @@ const ChatScreen: React.FC = () => {
           })
           .catch(() => {
             setIsMediaLoading(false);
-            setEditText(true);
           });
       })
       .catch(() => {
@@ -228,16 +202,38 @@ const ChatScreen: React.FC = () => {
       });
   };
 
+  const documentPikcer = async () => {
+    try {
+      const doc: any = await getDocument();
+      setIsMediaLoading(true);
+      const url = await documentUpload(doc.path);
+      const msg = getMessageObject('doc', url, doc.fileName);
+      onSend(msg);
+    } catch (error) {
+      setIsMediaLoading(false);
+      if (error === 'cancelled') {
+        return null;
+      } else {
+        // errorToast('Failed to upload. Please select valid document');
+        return null;
+      }
+    }
+  };
+
   const renderActions = (params: any) => {
     const options = {
       'Choose image/video': () => {
         imageOrVideoPicker();
+      },
+      'Choose document': () => {
+        documentPikcer();
       },
       Cancel: () => {}, // tslint:disable-line
     };
     return <Actions {...params} options={options} />;
   };
 
+  console.log('messages is', JSON.stringify(messages));
   return (
     <Container>
       <Header transparent={true}>
@@ -256,17 +252,18 @@ const ChatScreen: React.FC = () => {
         //renderBubble={renderBubble}
         renderMessageAudio={renderAudio}
         renderMessageVideo={RenderVideo}
+        renderCustomView={renderCustomView}
         renderSend={renderSend}
         renderActions={renderActions}
         user={{
           _id: 1,
         }}
         textInputProps={{
-          editable: canEditText,
-          placeholder: canEditText
+          editable: !isMediaLoading,
+          placeholder: !isMediaLoading
             ? 'Type a message...'
-            : isMediaLoading && 'Uploading media ...',
-          selectTextOnFocus: canEditText,
+            : 'Uploading media ...',
+          selectTextOnFocus: !isMediaLoading,
         }}
       />
       <KeyboardAvoidingView />

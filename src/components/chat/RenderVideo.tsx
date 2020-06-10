@@ -5,7 +5,7 @@ import VideoPlayer from 'react-native-video-controls';
 
 const RenderVideo = (props: any) => {
   return (
-    <View style={{height: '85%'}}>
+    <View style={{height: 180, borderRadius: 20, margin: 3}}>
       <VideoPlayer
         source={{uri: props.currentMessage.video}}
         toggleResizeModeOnFullscreen={false}
