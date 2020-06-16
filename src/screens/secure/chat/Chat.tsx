@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-bitwise */
 /* eslint-disable react-native/no-inline-styles */
 import React, {useState, useEffect} from 'react';
@@ -30,7 +31,7 @@ import ImagePicker from 'react-native-image-crop-picker';
 import {documentUpload, getDocument} from '../../../lib/docUpload';
 import renderCustomView from '../../../components/chat/RenderCustomView';
 
-const ChatScreen: React.FC = () => {
+const ChatScreen: React.FC = (props: any) => {
   const [messages, setMessages] = useState([]);
   const [startAudio, setStartAudio] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
@@ -38,8 +39,11 @@ const ChatScreen: React.FC = () => {
     `${AudioUtils.DocumentDirectoryPath}/${new Date().getTime()}.aac`,
   );
   const [playAudio, setPlayAudio] = useState(false);
-
   const [isMediaLoading, setIsMediaLoading] = useState(false);
+
+  const {chatDetail} = props.route.params;
+
+  console.log('chatDetail is', chatDetail);
 
   useEffect(() => {
     checkPermission().then(async isPermission => {
@@ -58,7 +62,8 @@ const ChatScreen: React.FC = () => {
     const message: any = [
       {
         _id: 1,
-        text: 'I am a React developer',
+        text:
+          'கீழே உள்ள விருப்பங்களிலிருந்து ஒரு எண்ணைத் தட்டச்சு செய்க 1. சிகிச்சை (Treatment/வைத்தியம்) 2. பராமரிப்பு ஆலோசனை (தீவனம் சம்பந்தமாக கன்று வளர்ப்பு இனப்பெருக்கம் தடுப்பூசி இதர)',
         createdAt: '2020-06-10T06:13:25.704Z',
         user: {
           _id: 2,
@@ -158,18 +163,18 @@ const ChatScreen: React.FC = () => {
     sound.release();
   };
 
-  const renderAudio = (props: any) => {
+  const renderAudio = (audioProps: any) => {
     return (
       <RenderAudio
-        {...props}
+        {...audioProps}
         onAudioPress={onAudioPress}
         playAudio={playAudio}
       />
     );
   };
 
-  const renderSend = (props: any) => {
-    if (!props.text.trim()) {
+  const renderSend = (senProps: any) => {
+    if (!senProps.text.trim()) {
       return (
         <RenderMicroPhone
           handleAudio={handleAudioPress}
@@ -177,7 +182,7 @@ const ChatScreen: React.FC = () => {
         />
       );
     }
-    return <Send {...props} />;
+    return <Send {...senProps} />;
   };
 
   const imageOrVideoPicker = () => {
