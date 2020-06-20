@@ -1,35 +1,76 @@
 /* eslint-disable react-native/no-inline-styles */
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {View, Icon} from 'native-base';
 import {Bubble, InputToolbar} from 'react-native-gifted-chat';
 import {StyleSheet, TouchableOpacity, Alert} from 'react-native';
 import Sound from 'react-native-sound';
+import TrackPlayer, {usePlaybackState} from 'react-native-track-player';
 
 const RenderAudio = (props: any) => {
   const [playAudio, setPlayAudio] = useState(false);
 
-  const onPlayAudio = () => {
+  const playbackState = usePlaybackState();
+
+  useEffect(() => {
+    setup();
+  }, []);
+
+  // useEffect(() => {
+  //   if (playbackState === TrackPlayer.STATE_PLAYING) {
+  //     setPlayAudio(true);
+  //   } else {
+  //     setPlayAudio(false);
+  //   }
+  //   //STATE_STOPPED
+  // }, [playbackState]);
+
+  async function setup() {
+    await TrackPlayer.setupPlayer({});
+    await TrackPlayer.updateOptions({
+      stopWithApp: true,
+      capabilities: [
+        TrackPlayer.CAPABILITY_PLAY,
+        TrackPlayer.CAPABILITY_PAUSE,
+        TrackPlayer.CAPABILITY_SKIP_TO_NEXT,
+        TrackPlayer.CAPABILITY_SKIP_TO_PREVIOUS,
+        TrackPlayer.CAPABILITY_STOP,
+      ],
+      compactCapabilities: [
+        TrackPlayer.CAPABILITY_PLAY,
+        TrackPlayer.CAPABILITY_PAUSE,
+      ],
+    });
+  }
+
+  const onPlayAudio = async () => {
     setPlayAudio(true);
-    // props.onAudioPress(props.currentMessage.audio);
-    // setPlayAudio(false);
-    const sound = new Sound(
-      props.currentMessage.audio,
-      Sound.MAIN_BUNDLE,
-      (error: any) => {
-        if (error) {
-          console.log('failed to load the sound', error);
-        }
-        setPlayAudio(false);
-        sound.play(success => {
-          console.log(success, 'success play');
-          sound.release();
-          if (!success) {
-            Alert.alert('There was an error playing this audio');
-          }
-        });
-      },
-    );
-    sound.release();
+    const currentTrack = await TrackPlayer.getCurrentTrack();
+    console.log('currentTrack is', currentTrack, playbackState);
+    if (
+      currentTrack == null ||
+      (currentTrack == 'local-track' &&
+        playbackState !== 3 &&
+        playbackState !== 2)
+    ) {
+      await TrackPlayer.reset();
+      await TrackPlayer.add({
+        id: 'local-track',
+        url: props.currentMessage.audio,
+        //title: 'Pure (Demo)',
+        //artist: 'David Chavez',
+        artwork: 'https://i.picsum.photos/id/500/200/200.jpg',
+        //duration: 28,
+      });
+      await TrackPlayer.play();
+    } else {
+      if (playbackState === TrackPlayer.STATE_PAUSED) {
+        await TrackPlayer.play();
+      } else {
+        await TrackPlayer.pause();
+      }
+    }
+    setPlayAudio(false);
+
   };
 
   return (

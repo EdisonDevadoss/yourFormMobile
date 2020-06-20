@@ -42,8 +42,8 @@ const ChatScreen: React.FC = (props: any) => {
   const {chatDetail} = props.route.params;
   console.log('chatDetail.message is', chatDetail.message);
 
-  const [messages, setMessages] = useState([]);
-  // const [messages, setMessages] = useState([...chatDetail.message]);
+  // const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([...chatDetail.message]);
   const [startAudio, setStartAudio] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [audioPath, setAudioPath] = useState(
@@ -66,20 +66,20 @@ const ChatScreen: React.FC = (props: any) => {
         console.log(data, 'on finish');
       };
     });
-    const message: any = [
-      {
-        _id: 1,
-        audio:
-          'https://s3-external-1.amazonaws.com/media.twiliocdn.com/ACe2d2cdcbd263af1f20ad9c73aba8708b/7c84c9fa884b794f28e15784fb34911e',
-        createdAt: '2020-06-10T06:13:25.704Z',
-        user: {
-          _id: 2,
-          name: 'React Native',
-          avatar: 'https://placeimg.com/140/140/any',
-        },
-      },
-    ];
-    setMessages(message);
+    // const message: any = [
+    //   {
+    //     _id: 1,
+    //     audio:
+    //       'https://s3-external-1.amazonaws.com/media.twiliocdn.com/ACe2d2cdcbd263af1f20ad9c73aba8708b/7c84c9fa884b794f28e15784fb34911e',
+    //     createdAt: '2020-06-10T06:13:25.704Z',
+    //     user: {
+    //       _id: 2,
+    //       name: 'React Native',
+    //       avatar: 'https://placeimg.com/140/140/any',
+    //     },
+    //   },
+    // ];
+    // setMessages(message);
 
     // // setMessages(chatDetail.message);
   }, []);
