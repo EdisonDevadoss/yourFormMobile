@@ -9,7 +9,7 @@ const RenderVideo = (props: any) => {
       <VideoPlayer
         source={{uri: props.currentMessage.video}}
         toggleResizeModeOnFullscreen={false}
-        showOnStart={false}
+        //showOnStart={false}
         disableFullscreen
         disableBack
         //style={{height: 30, width: 100}}

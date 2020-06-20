@@ -83,7 +83,7 @@ const HomeScreen: React.FC = (props: any) => {
                   }>
                   <Body>
                     <Text>{item.mobile_no}</Text>
-                    <Text>{item.status}</Text>
+                    <Text>{item.pincode}</Text>
                   </Body>
                 </ListItem>
               );

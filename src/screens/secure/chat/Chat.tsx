@@ -12,9 +12,15 @@ import {
   View,
   Text,
   Icon,
+  Toast,
+  Root,
 } from 'native-base';
 import {GiftedChat, Actions, Send} from 'react-native-gifted-chat';
-import {renderBubble, RenderAudio} from '../../../components/chat/RenderBubble';
+import {
+  renderBubble,
+  RenderAudio,
+  renderInputToolbar,
+} from '../../../components/chat/RenderBubble';
 import RenderMicroPhone from '../.././../components/chat/RenderMicroPhone';
 import {
   KeyboardAvoidingView,
@@ -24,15 +30,20 @@ import {
 } from 'react-native';
 import {AudioRecorder, AudioUtils} from 'react-native-audio';
 import Sound from 'react-native-sound';
-import {docStorage} from './Chat.action';
+import {docStorage, sendMessage} from './Chat.action';
 import {uuid} from 'uuidv4';
 import RenderVideo from '../../../components/chat/RenderVideo';
 import ImagePicker from 'react-native-image-crop-picker';
 import {documentUpload, getDocument} from '../../../lib/docUpload';
 import renderCustomView from '../../../components/chat/RenderCustomView';
+import {isValidFileSize} from '../../../lib/fileUploadSize';
 
 const ChatScreen: React.FC = (props: any) => {
+  const {chatDetail} = props.route.params;
+  console.log('chatDetail.message is', chatDetail.message);
+
   const [messages, setMessages] = useState([]);
+  // const [messages, setMessages] = useState([...chatDetail.message]);
   const [startAudio, setStartAudio] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [audioPath, setAudioPath] = useState(
@@ -40,10 +51,6 @@ const ChatScreen: React.FC = (props: any) => {
   );
   const [playAudio, setPlayAudio] = useState(false);
   const [isMediaLoading, setIsMediaLoading] = useState(false);
-
-  const {chatDetail} = props.route.params;
-
-  console.log('chatDetail is', chatDetail);
 
   useEffect(() => {
     checkPermission().then(async isPermission => {
@@ -62,8 +69,8 @@ const ChatScreen: React.FC = (props: any) => {
     const message: any = [
       {
         _id: 1,
-        text:
-          'கீழே உள்ள விருப்பங்களிலிருந்து ஒரு எண்ணைத் தட்டச்சு செய்க 1. சிகிச்சை (Treatment/வைத்தியம்) 2. பராமரிப்பு ஆலோசனை (தீவனம் சம்பந்தமாக கன்று வளர்ப்பு இனப்பெருக்கம் தடுப்பூசி இதர)',
+        audio:
+          'https://s3-external-1.amazonaws.com/media.twiliocdn.com/ACe2d2cdcbd263af1f20ad9c73aba8708b/7c84c9fa884b794f28e15784fb34911e',
         createdAt: '2020-06-10T06:13:25.704Z',
         user: {
           _id: 2,
@@ -73,6 +80,8 @@ const ChatScreen: React.FC = (props: any) => {
       },
     ];
     setMessages(message);
+
+    // // setMessages(chatDetail.message);
   }, []);
 
   const prepareRecordingPath = (path: any) => {
@@ -104,8 +113,10 @@ const ChatScreen: React.FC = (props: any) => {
   };
 
   const onSend = (message: any) => {
-    const updateMessge = GiftedChat.append(messages, message);
+    const updateMessge = GiftedChat.append(message, messages);
+    console.log('updateMessge is', updateMessge);
     setMessages(updateMessge);
+    sendMessage(chatDetail.id, message);
     setIsMediaLoading(false);
   };
 
@@ -116,6 +127,7 @@ const ChatScreen: React.FC = (props: any) => {
       await AudioRecorder.startRecording();
     } else {
       setStartAudio(false);
+      setIsMediaLoading(true);
       await AudioRecorder.stopRecording();
       const fileName = `${new Date().getTime()}.aac`;
       const file = {
@@ -124,6 +136,8 @@ const ChatScreen: React.FC = (props: any) => {
         type: 'audio/aac',
       };
       docStorage(file.uri).then(url => {
+        // const audioUrl = `${url}.mp3`;
+        console.log('url is', url);
         const msg = getMessageObject('audio', url, fileName);
         onSend(msg);
       });
@@ -174,7 +188,7 @@ const ChatScreen: React.FC = (props: any) => {
   };
 
   const renderSend = (senProps: any) => {
-    if (!senProps.text.trim()) {
+    if (!senProps.text.trim() && !isMediaLoading) {
       return (
         <RenderMicroPhone
           handleAudio={handleAudioPress}
@@ -189,18 +203,25 @@ const ChatScreen: React.FC = (props: any) => {
     ImagePicker.openPicker({})
       .then((result: any) => {
         console.log('result is', result);
-        setIsMediaLoading(true);
-        docStorage(result.path)
-          .then((uri: any) => {
-            console.log('uri is', uri);
-            const isVideo = result.mime.startsWith('video');
-            const content = isVideo ? 'video' : 'image';
-            const msg = getMessageObject(content, uri, null);
-            onSend(msg);
-          })
-          .catch(() => {
-            setIsMediaLoading(false);
-          });
+        console.log('is valid', isValidFileSize(result.size));
+        if (isValidFileSize(result.size)) {
+          setIsMediaLoading(true);
+          docStorage(result.path)
+            .then((uri: any) => {
+              console.log('uri is', uri);
+              const isVideo = result.mime.startsWith('video');
+              const content = isVideo ? 'video' : 'image';
+              // const validUrl = isVideo ? `${uri}.mp4` : uri;
+              const msg = getMessageObject(content, uri, null);
+              console.log('msg is', msg);
+              onSend(msg);
+            })
+            .catch(() => {
+              setIsMediaLoading(false);
+            });
+        } else {
+          Toast.show({text: 'File size should not be greater than 4MB'});
+        }
       })
       .catch(() => {
         return null;
@@ -238,41 +259,45 @@ const ChatScreen: React.FC = (props: any) => {
     return <Actions {...params} options={options} />;
   };
 
-  console.log('messages is', JSON.stringify(messages));
   return (
-    <Container>
-      <Header transparent={true}>
-        <Left />
-        <Left />
-        <Left />
-        <Left />
-        <Body>
-          <Title style={{color: '#000'}}>Chats</Title>
-        </Body>
-        <Right />
-      </Header>
-      <GiftedChat
-        messages={messages}
-        onSend={sms => onSend(sms)}
-        //renderBubble={renderBubble}
-        renderMessageAudio={renderAudio}
-        renderMessageVideo={RenderVideo}
-        renderCustomView={renderCustomView}
-        renderSend={renderSend}
-        renderActions={renderActions}
-        user={{
-          _id: 1,
-        }}
-        textInputProps={{
-          editable: !isMediaLoading,
-          placeholder: !isMediaLoading
-            ? 'Type a message...'
-            : 'Uploading media ...',
-          selectTextOnFocus: !isMediaLoading,
-        }}
-      />
-      <KeyboardAvoidingView />
-    </Container>
+    <Root>
+      <Container>
+        <Header transparent={true}>
+          <Left />
+          <Left />
+          <Left />
+          <Left />
+          <Body>
+            <Title style={{color: '#000'}}>Chats</Title>
+          </Body>
+          <Right />
+        </Header>
+        <GiftedChat
+          messages={messages}
+          onSend={sms => onSend(sms)}
+          //renderBubble={renderBubble}
+          renderMessageAudio={renderAudio}
+          renderMessageVideo={RenderVideo}
+          renderCustomView={renderCustomView}
+          renderSend={renderSend}
+          renderActions={!isMediaLoading ? renderActions : null}
+          renderInputToolbar={renderInputToolbar}
+          user={{
+            _id: 1,
+            name: 'admin',
+          }}
+          textInputProps={{
+            editable: !isMediaLoading,
+            placeholder: !isMediaLoading
+              ? 'Type a message...'
+              : 'Uploading media ...',
+            selectTextOnFocus: !isMediaLoading,
+          }}
+          inverted={false}
+        />
+        <KeyboardAvoidingView />
+      </Container>
+    </Root>
   );
 };
 export default ChatScreen;

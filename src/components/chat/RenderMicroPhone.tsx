@@ -20,7 +20,7 @@ const RenderMicroPhone = (props: any) => {
           // shadowOffset: {width: 0, height: 0},
           // shadowOpacity: 0.5,
           // zIndex: 2,
-          color: props.startAudio ? 'red' : 'black',
+          color: props.startAudio ? 'red' : '#b2b2b2',
           backgroundColor: 'transparent',
         }}
       />
