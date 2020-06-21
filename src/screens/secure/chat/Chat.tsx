@@ -37,13 +37,14 @@ import ImagePicker from 'react-native-image-crop-picker';
 import {documentUpload, getDocument} from '../../../lib/docUpload';
 import renderCustomView from '../../../components/chat/RenderCustomView';
 import {isValidFileSize} from '../../../lib/fileUploadSize';
+import {env} from '../../../config';
 
 const ChatScreen: React.FC = (props: any) => {
   const {chatDetail} = props.route.params;
-  console.log('chatDetail.message is', chatDetail.message);
 
   // const [messages, setMessages] = useState([]);
   const [messages, setMessages] = useState([...chatDetail.message]);
+  console.log('messages is', messages);
   const [startAudio, setStartAudio] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [audioPath, setAudioPath] = useState(
@@ -53,6 +54,26 @@ const ChatScreen: React.FC = (props: any) => {
   const [isMediaLoading, setIsMediaLoading] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line no-undef
+    const ws = new WebSocket('ws://chatbot-api.herokuapp.com/');
+    console.log('ws', ws);
+    ws.onopen = () => {
+      console.log('WebSocket Client Connected');
+    };
+    ws.onmessage = msg => {
+      console.log('msg is', msg.data);
+      const parse = JSON.parse(msg.data);
+      console.log('parse', parse);
+      setMessages([...parse.message]);
+    };
+    return ()=> ws.close();
+  }, []);
+
+  useEffect(() => {
+    // let data = {method: 'command'};
+    // console.log('ws is', ws);
+    // ws.send(JSON.stringify(data));
+
     checkPermission().then(async isPermission => {
       setHasPermission(isPermission);
       if (!isPermission) {

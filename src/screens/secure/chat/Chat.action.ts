@@ -28,12 +28,12 @@ const sendMessage = (id: any, obj: any) => {
       },
     },
   };
-  console.log('messageObj is', messageObj);
+  // console.log('messageObj is', messageObj);
   return new Promise((resolve, reject) => {
     http
       .put(`v1/conversations/${id}`, messageObj)
       .then(response => {
-        console.log('Send response is', response);
+        // console.log('Send response is', response);
         resolve(response);
       })
       .catch(error => {
