@@ -30,17 +30,21 @@ import {
 } from 'react-native';
 import {AudioRecorder, AudioUtils} from 'react-native-audio';
 import Sound from 'react-native-sound';
-import {docStorage, sendMessage} from './Chat.action';
+import {docStorage, sendMessage, getAConversations} from './Chat.action';
 import {uuid} from 'uuidv4';
 import RenderVideo from '../../../components/chat/RenderVideo';
 import ImagePicker from 'react-native-image-crop-picker';
 import {documentUpload, getDocument} from '../../../lib/docUpload';
 import renderCustomView from '../../../components/chat/RenderCustomView';
 import {isValidFileSize} from '../../../lib/fileUploadSize';
-import {env} from '../../../config';
+// import {env} from '../../../config';
+// import ws from './socket';
 
 const ChatScreen: React.FC = (props: any) => {
   const {chatDetail} = props.route.params;
+  // const [ws, setWs] = useState(
+  //   new WebSocket('ws://chatbot-api.herokuapp.com/'),
+  // );
 
   // const [messages, setMessages] = useState([]);
   const [messages, setMessages] = useState([...chatDetail.message]);
@@ -54,11 +58,19 @@ const ChatScreen: React.FC = (props: any) => {
   const [isMediaLoading, setIsMediaLoading] = useState(false);
 
   useEffect(() => {
+    getAConversations(chatDetail.id).then((res: any) => {
+      console.log('res is', res);
+      setMessages(res.message);
+    });
+  }, []);
+
+  useEffect(() => {
+    // console.log('useEffect is called')
     // eslint-disable-next-line no-undef
-    const ws = new WebSocket('ws://chatbot-api.herokuapp.com/');
+    const ws = new WebSocket('ws://chatbot-api.herokuapp.com');
     console.log('ws', ws);
     ws.onopen = () => {
-      console.log('WebSocket Client Connected');
+      console.log('WebSocket Client Connected', ws.readyState);
     };
     ws.onmessage = msg => {
       console.log('msg is', msg.data);
@@ -66,14 +78,22 @@ const ChatScreen: React.FC = (props: any) => {
       console.log('parse', parse);
       setMessages([...parse.message]);
     };
-    return ()=> ws.close();
+    ws.onclose = err => {
+      console.log('err', err);
+      console.log(ws.readyState, 'onclose');
+    };
+    ws.onerror = err => {
+      console.log('err', err);
+      console.log(ws.readyState, 'onerror');
+      // setWs(new WebSocket('ws://chatbot-api.herokuapp.com/'));
+    };
+    // console.log(ws.readyState, 'readyState');
+
+    return () => ws.close();
   }, []);
 
-  useEffect(() => {
-    // let data = {method: 'command'};
-    // console.log('ws is', ws);
-    // ws.send(JSON.stringify(data));
 
+  useEffect(() => {
     checkPermission().then(async isPermission => {
       setHasPermission(isPermission);
       if (!isPermission) {
@@ -209,14 +229,14 @@ const ChatScreen: React.FC = (props: any) => {
   };
 
   const renderSend = (senProps: any) => {
-    if (!senProps.text.trim() && !isMediaLoading) {
-      return (
-        <RenderMicroPhone
-          handleAudio={handleAudioPress}
-          startAudio={startAudio}
-        />
-      );
-    }
+    // if (!senProps.text.trim() && !isMediaLoading) {
+    //   return (
+    //     <RenderMicroPhone
+    //       handleAudio={handleAudioPress}
+    //       startAudio={startAudio}
+    //     />
+    //   );
+    // }
     return <Send {...senProps} />;
   };
 
@@ -296,11 +316,11 @@ const ChatScreen: React.FC = (props: any) => {
         <GiftedChat
           messages={messages}
           onSend={sms => onSend(sms)}
-          //renderBubble={renderBubble}
+          // renderBubble={renderBubble}
           renderMessageAudio={renderAudio}
           renderMessageVideo={RenderVideo}
           renderCustomView={renderCustomView}
-          renderSend={renderSend}
+          //renderSend={renderSend}
           renderActions={!isMediaLoading ? renderActions : null}
           renderInputToolbar={renderInputToolbar}
           user={{

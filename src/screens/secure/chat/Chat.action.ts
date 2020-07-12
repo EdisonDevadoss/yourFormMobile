@@ -6,7 +6,7 @@ const docStorage = (file: any) => {
     storage
       .chatImages(file)
       .then((data: any) => {
-        console.log('storage data', data)
+        console.log('storage data', data);
         storage
           .storageRef(data.metadata.fullPath)
           .getDownloadURL()
@@ -43,4 +43,18 @@ const sendMessage = (id: any, obj: any) => {
   });
 };
 
-export {docStorage, sendMessage};
+export const getAConversations = (id: any) => {
+  return new Promise((resolve, reject) => {
+    http
+      .get(`v1/conversations/${id}`)
+      .then(response => {
+        console.log('response is', response);
+        resolve(response);
+      })
+      .catch(error => {
+        reject(error);
+      });
+  });
+};
+
+export {docStorage, sendMessage, getAConversations};
